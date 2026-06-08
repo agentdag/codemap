@@ -34,9 +34,26 @@ Edge cases (handle explicitly):
 - Overloads / same-name methods: append `#<index>` by source order.
 
 ## Node
-{ id, kind, name, qualifiedName, language,
-  location { file, range { startLine, startCol, endLine, endCol } },
-  contentHash, metadata: map<string, json> }
+```json
+{ 
+  id, 
+  kind, 
+  name, 
+  qualifiedName, 
+  language,
+  location: { 
+    file, 
+    range: { 
+      startLine, 
+      startCol, 
+      endLine, 
+      endCol 
+    } 
+  },
+  contentHash, 
+  metadata: map<string, json> 
+}
+```
 - name: short display name.  contentHash: blake3 of the node's source slice
   (file contents for File nodes); used later for incremental change detection.
 
@@ -45,8 +62,23 @@ File, Module, Function, Method, Class, Interface, TypeAlias, Variable
 (reserved for later: Endpoint, Middleware, Controller, Entity, External)
 
 ## Edge
-{ id, source, target, kind, confidence, sites: CallSite[], metadata }
-- CallSite { file, range }
+```json
+{ 
+  id, 
+  source, 
+  target, 
+  kind, 
+  confidence, 
+  sites: CallSite[], 
+  metadata 
+}
+```
+```json 
+CallSite: { 
+  file, 
+  range 
+}
+```
 
 ### EdgeKind (Phase 0; extensible)
 contains, imports, calls
@@ -60,8 +92,18 @@ CARDINAL RULE: a `calls` edge from Phase-0 tree-sitter is `heuristic`.
 Never label a guess `resolved`.
 
 ## Document
-{ schemaVersion, root { repoPath, analyzedAt (ISO8601), toolVersion },
-  nodes[], edges[] }
+```json
+{ 
+  schemaVersion,
+  root: {
+    repoPath, 
+    analyzedAt (ISO8601), 
+    toolVersion 
+  },
+  nodes[], 
+  edges[] 
+}
+```
 
 ## Serialization (determinism is mandatory)
 JSON. nodes sorted by id; edges sorted by id; map keys sorted.
