@@ -1,0 +1,313 @@
+{
+  "edges": [
+    {
+      "confidence": "resolved",
+      "id": "file:greet/greeter.go=[contains]=>go:greet/greeter.go#Greeter",
+      "kind": "contains",
+      "metadata": {},
+      "sites": [],
+      "source": "file:greet/greeter.go",
+      "target": "go:greet/greeter.go#Greeter"
+    },
+    {
+      "confidence": "resolved",
+      "id": "file:greet/greeter.go=[contains]=>go:greet/greeter.go#Message",
+      "kind": "contains",
+      "metadata": {},
+      "sites": [],
+      "source": "file:greet/greeter.go",
+      "target": "go:greet/greeter.go#Message"
+    },
+    {
+      "confidence": "resolved",
+      "id": "file:greet/greeter.go=[contains]=>go:greet/greeter.go#New",
+      "kind": "contains",
+      "metadata": {},
+      "sites": [],
+      "source": "file:greet/greeter.go",
+      "target": "go:greet/greeter.go#New"
+    },
+    {
+      "confidence": "resolved",
+      "id": "file:greet/greeter.go=[contains]=>go:greet/greeter.go#Speaker",
+      "kind": "contains",
+      "metadata": {},
+      "sites": [],
+      "source": "file:greet/greeter.go",
+      "target": "go:greet/greeter.go#Speaker"
+    },
+    {
+      "confidence": "resolved",
+      "id": "file:main.go=[contains]=>go:main.go#main",
+      "kind": "contains",
+      "metadata": {},
+      "sites": [],
+      "source": "file:main.go",
+      "target": "go:main.go#main"
+    },
+    {
+      "confidence": "resolved",
+      "id": "file:main.go=[imports]=>module:greet",
+      "kind": "imports",
+      "metadata": {},
+      "sites": [],
+      "source": "file:main.go",
+      "target": "module:greet"
+    },
+    {
+      "confidence": "resolved",
+      "id": "go:greet/greeter.go#Greeter=[contains]=>go:greet/greeter.go#Greeter.Bye",
+      "kind": "contains",
+      "metadata": {},
+      "sites": [],
+      "source": "go:greet/greeter.go#Greeter",
+      "target": "go:greet/greeter.go#Greeter.Bye"
+    },
+    {
+      "confidence": "resolved",
+      "id": "go:greet/greeter.go#Greeter=[contains]=>go:greet/greeter.go#Greeter.Hello",
+      "kind": "contains",
+      "metadata": {},
+      "sites": [],
+      "source": "go:greet/greeter.go#Greeter",
+      "target": "go:greet/greeter.go#Greeter.Hello"
+    },
+    {
+      "confidence": "resolved",
+      "id": "module:.=[contains]=>file:main.go",
+      "kind": "contains",
+      "metadata": {},
+      "sites": [],
+      "source": "module:.",
+      "target": "file:main.go"
+    },
+    {
+      "confidence": "resolved",
+      "id": "module:.=[contains]=>module:greet",
+      "kind": "contains",
+      "metadata": {},
+      "sites": [],
+      "source": "module:.",
+      "target": "module:greet"
+    },
+    {
+      "confidence": "resolved",
+      "id": "module:greet=[contains]=>file:greet/greeter.go",
+      "kind": "contains",
+      "metadata": {},
+      "sites": [],
+      "source": "module:greet",
+      "target": "file:greet/greeter.go"
+    }
+  ],
+  "nodes": [
+    {
+      "contentHash": "9d08a0028cbd10e5e20b39f1cdcc24ba505bb639d6613dd63653215fdaf0250a",
+      "id": "file:greet/greeter.go",
+      "kind": "File",
+      "language": "go",
+      "location": {
+        "file": "greet/greeter.go",
+        "range": {
+          "endCol": 0,
+          "endLine": 27,
+          "startCol": 0,
+          "startLine": 0
+        }
+      },
+      "metadata": {},
+      "name": "greeter.go",
+      "qualifiedName": ""
+    },
+    {
+      "contentHash": "7c315d00738295e9b8aa09ff171c964e99a7662fa80e7a734c1d2ad346434b2c",
+      "id": "file:main.go",
+      "kind": "File",
+      "language": "go",
+      "location": {
+        "file": "main.go",
+        "range": {
+          "endCol": 0,
+          "endLine": 8,
+          "startCol": 0,
+          "startLine": 0
+        }
+      },
+      "metadata": {},
+      "name": "main.go",
+      "qualifiedName": ""
+    },
+    {
+      "contentHash": "ae895ee020c9a0e0cd472ca4ebf04d5e747bebd26f5ac65c62b2aefb90cb5873",
+      "id": "go:greet/greeter.go#Greeter",
+      "kind": "Class",
+      "language": "go",
+      "location": {
+        "file": "greet/greeter.go",
+        "range": {
+          "endCol": 1,
+          "endLine": 5,
+          "startCol": 5,
+          "startLine": 3
+        }
+      },
+      "metadata": {},
+      "name": "Greeter",
+      "qualifiedName": "Greeter"
+    },
+    {
+      "contentHash": "3d4ca34a5062a6e696911c2ac0f6382a857fdeacdc2d22ec04a437dfb08df4e0",
+      "id": "go:greet/greeter.go#Greeter.Bye",
+      "kind": "Method",
+      "language": "go",
+      "location": {
+        "file": "greet/greeter.go",
+        "range": {
+          "endCol": 1,
+          "endLine": 26,
+          "startCol": 0,
+          "startLine": 24
+        }
+      },
+      "metadata": {
+        "receiver": "Greeter"
+      },
+      "name": "Bye",
+      "qualifiedName": "Greeter.Bye"
+    },
+    {
+      "contentHash": "08f5ba29c94d91f50c56d309b319f1e5a1cd82c4e8d1e95069b2fe884046e876",
+      "id": "go:greet/greeter.go#Greeter.Hello",
+      "kind": "Method",
+      "language": "go",
+      "location": {
+        "file": "greet/greeter.go",
+        "range": {
+          "endCol": 1,
+          "endLine": 22,
+          "startCol": 0,
+          "startLine": 20
+        }
+      },
+      "metadata": {
+        "receiver": "Greeter"
+      },
+      "name": "Hello",
+      "qualifiedName": "Greeter.Hello"
+    },
+    {
+      "contentHash": "9d0146dca01ab632f000fab92595b63084f57c93422d12610cbb893055262d16",
+      "id": "go:greet/greeter.go#Message",
+      "kind": "TypeAlias",
+      "language": "go",
+      "location": {
+        "file": "greet/greeter.go",
+        "range": {
+          "endCol": 21,
+          "endLine": 13,
+          "startCol": 5,
+          "startLine": 13
+        }
+      },
+      "metadata": {},
+      "name": "Message",
+      "qualifiedName": "Message"
+    },
+    {
+      "contentHash": "441e320dc6046399af0ae7d7447060e19b5154de101db1aada3eeed7c2852c63",
+      "id": "go:greet/greeter.go#New",
+      "kind": "Function",
+      "language": "go",
+      "location": {
+        "file": "greet/greeter.go",
+        "range": {
+          "endCol": 1,
+          "endLine": 18,
+          "startCol": 0,
+          "startLine": 16
+        }
+      },
+      "metadata": {},
+      "name": "New",
+      "qualifiedName": "New"
+    },
+    {
+      "contentHash": "b83cf46216afea54492faab59219577c248867e516cb090a7e8257c7450502e3",
+      "id": "go:greet/greeter.go#Speaker",
+      "kind": "Interface",
+      "language": "go",
+      "location": {
+        "file": "greet/greeter.go",
+        "range": {
+          "endCol": 1,
+          "endLine": 10,
+          "startCol": 5,
+          "startLine": 8
+        }
+      },
+      "metadata": {},
+      "name": "Speaker",
+      "qualifiedName": "Speaker"
+    },
+    {
+      "contentHash": "b6cd8cc71f3706b5354c55f45c41c0a0efcfc66c33877e0ae248822b3c42a302",
+      "id": "go:main.go#main",
+      "kind": "Function",
+      "language": "go",
+      "location": {
+        "file": "main.go",
+        "range": {
+          "endCol": 1,
+          "endLine": 7,
+          "startCol": 0,
+          "startLine": 4
+        }
+      },
+      "metadata": {},
+      "name": "main",
+      "qualifiedName": "main"
+    },
+    {
+      "contentHash": "",
+      "id": "module:.",
+      "kind": "Module",
+      "language": "go",
+      "location": {
+        "file": ".",
+        "range": {
+          "endCol": 0,
+          "endLine": 0,
+          "startCol": 0,
+          "startLine": 0
+        }
+      },
+      "metadata": {},
+      "name": "main",
+      "qualifiedName": ""
+    },
+    {
+      "contentHash": "",
+      "id": "module:greet",
+      "kind": "Module",
+      "language": "go",
+      "location": {
+        "file": "greet",
+        "range": {
+          "endCol": 0,
+          "endLine": 0,
+          "startCol": 0,
+          "startLine": 0
+        }
+      },
+      "metadata": {},
+      "name": "greet",
+      "qualifiedName": ""
+    }
+  ],
+  "root": {
+    "analyzedAt": "1970-01-01T00:00:00Z",
+    "repoPath": "../../fixtures/go-sample",
+    "toolVersion": "0.1.0"
+  },
+  "schemaVersion": "0.1.0"
+}

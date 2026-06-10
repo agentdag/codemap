@@ -1,0 +1,9 @@
+[package]
+name = "cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.6.1", features = ["derive"] }
+core-ir = { version = "0.1.0", path = "../core-ir" }
+extract = { version = "0.1.0", path = "../extract" }

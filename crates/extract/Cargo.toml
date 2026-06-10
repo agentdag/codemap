@@ -1,0 +1,11 @@
+[package]
+name = "extract"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+core-ir = { version = "0.1.0", path = "../core-ir" }
+ignore = "0.4.26"
+serde_json = "1.0.150"
+tree-sitter = "0.26.9"
+tree-sitter-go = "0.25.0"
