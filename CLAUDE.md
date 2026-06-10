@@ -30,3 +30,8 @@ A local-first desktop app that builds an editable architecture map of any codeba
 ## Conventions
 - Rust edition: 2021. Errors: thiserror for libs, anyhow at the CLI boundary.  (adjust)
 - Commits: conventional commits.  Specs in docs/specs/, decisions in docs/adr/.
+
+## File organization
+- One primary type-group per file. Do not dump a whole crate into lib.rs.
+- lib.rs / mod.rs contain only module declarations and re-exports.
+- Keep files reviewable (~under 300 lines); split when they grow past that.
