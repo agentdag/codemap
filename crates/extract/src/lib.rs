@@ -8,6 +8,7 @@ mod error;
 mod extractor;
 mod go;
 mod repo;
+mod time;
 
 pub use error::ExtractError;
 pub use extractor::{FileExtraction, LanguageExtractor};

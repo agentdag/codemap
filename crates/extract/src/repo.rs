@@ -15,9 +15,6 @@ use crate::error::ExtractError;
 use crate::extractor::{FileExtraction, LanguageExtractor};
 use crate::go::GoExtractor;
 
-/// Deterministic provenance (see ADR 0001): wall-clock timestamping is deferred
-/// so output stays byte-identical across runs and golden-testable.
-const ANALYZED_AT: &str = "1970-01-01T00:00:00Z";
 const TOOL_VERSION: &str = "0.1.0";
 
 /// One extracted file plus its directory (package) relpath.
@@ -126,8 +123,8 @@ pub fn extract_repo(root: &Path) -> Result<IrDocument, ExtractError> {
     Ok(IrDocument {
         schema_version: SCHEMA_VERSION.to_string(),
         root: RootInfo {
-            repo_path: root.to_string_lossy().to_string(),
-            analyzed_at: ANALYZED_AT.to_string(),
+            repo_path: canonical_repo_path(root),
+            analyzed_at: crate::time::now_rfc3339(),
             tool_version: TOOL_VERSION.to_string(),
         },
         nodes: nodes.into_values().collect(),
@@ -279,6 +276,18 @@ fn dir_of(relpath: &str) -> String {
         Some(i) => relpath[..i].to_string(),
         None => ".".to_string(),
     }
+}
+
+/// A stable, machine-independent repo identifier: the final component of the
+/// canonicalized root (e.g. `../../fixtures/go-sample` → `go-sample`). Avoids
+/// leaking the caller's relative/absolute path into the IR. Falls back to the
+/// cleaned path string when there is no final component (e.g. filesystem root).
+fn canonical_repo_path(root: &Path) -> String {
+    let absolute = std::fs::canonicalize(root).unwrap_or_else(|_| root.to_path_buf());
+    absolute
+        .file_name()
+        .map(|name| name.to_string_lossy().to_string())
+        .unwrap_or_else(|| absolute.to_string_lossy().to_string())
 }
 
 fn rel_to_slash(path: &Path, root: &Path) -> String {

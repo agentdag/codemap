@@ -41,10 +41,13 @@ These are documented choices, not derived from the spec:
 - **Module `contentHash`**: empty string — a directory has no single source
   slice. (`File`/symbol hashes use blake3 over their bytes as the spec requires.)
 - **Module `location`**: `file` = the directory relpath, `range` = all zeros.
-- **`root.analyzedAt` / `root.toolVersion`**: deterministic constants
-  (`1970-01-01T00:00:00Z`, `0.1.0`). Wall-clock timestamping is deferred because
-  the acceptance requires byte-identical output across runs and a committed
-  golden file. `root.repoPath` is the path string passed to `extract_repo`.
+- **`root.analyzedAt`**: real current UTC time (RFC3339) in normal runs. The
+  golden test normalizes it to `1970-01-01T00:00:00Z` before comparing, so
+  determinism lives in the test, not the extractor. (Superseded the earlier
+  hardcoded-epoch approach.) `root.toolVersion` stays the constant `0.1.0`.
+- **`root.repoPath`**: a stable, machine-independent identifier — the final
+  component of the canonicalized root (e.g. `../../fixtures/go-sample` →
+  `go-sample`) — so the caller's relative/absolute path doesn't leak into the IR.
 
 ## Decision — positions
 0-based `(line, column)`; column is a byte offset within the line (tree-sitter's
