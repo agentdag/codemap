@@ -1,10 +1,10 @@
 //! `GoExtractor`: tree-sitter-go → per-file [`FileExtraction`]. Syntactic only.
 
-use core_ir::{content_hash, Location, Metadata, Node, NodeKind, Range};
+use core_ir::{content_hash, CallSite, Location, Metadata, Node, NodeKind, Range};
 use tree_sitter::{Language, Node as TsNode, Parser};
 
 use crate::error::ExtractError;
-use crate::extractor::{FileExtraction, LanguageExtractor};
+use crate::extractor::{CallRef, FileExtraction, LanguageExtractor};
 
 const LANGUAGE: &str = "go";
 
@@ -58,6 +58,7 @@ impl LanguageExtractor for GoExtractor {
 
         let mut symbols = Vec::new();
         let mut imports = Vec::new();
+        let mut calls = Vec::new();
         let mut package_name = String::new();
 
         let mut cursor = root.walk();
@@ -71,14 +72,10 @@ impl LanguageExtractor for GoExtractor {
                 "import_declaration" => collect_import_paths(child, src, &mut imports),
                 "function_declaration" => {
                     if let Some(name) = field_text(child, "name", src) {
-                        symbols.push(symbol_node(
-                            NodeKind::Function,
-                            &name,
-                            &name,
-                            relpath,
-                            child,
-                            src,
-                        ));
+                        let node =
+                            symbol_node(NodeKind::Function, &name, &name, relpath, child, src);
+                        collect_call_refs(child, &node.id, relpath, src, &mut calls);
+                        symbols.push(node);
                     }
                 }
                 "method_declaration" => {
@@ -89,6 +86,7 @@ impl LanguageExtractor for GoExtractor {
                         let mut node = symbol_node(NodeKind::Method, &name, &qn, relpath, child, src);
                         node.metadata
                             .insert("receiver".to_string(), serde_json::Value::String(recv));
+                        collect_call_refs(child, &node.id, relpath, src, &mut calls);
                         symbols.push(node);
                     }
                 }
@@ -102,6 +100,7 @@ impl LanguageExtractor for GoExtractor {
             symbols,
             imports,
             package_name,
+            calls,
         })
     }
 }
@@ -152,6 +151,61 @@ fn collect_type_specs(decl: TsNode, relpath: &str, src: &[u8], out: &mut Vec<Nod
             out.push(symbol_node(kind, &name, &name, relpath, spec, src));
         }
     }
+}
+
+/// Collect every `call_expression` under `node`, attributing each to `caller_id`.
+/// Recurses through everything (including nested calls and func literals), so
+/// `fmt.Println(g.Hello())` yields both calls — all credited to the enclosing
+/// top-level function/method (no closure nodes exist this stage).
+fn collect_call_refs(
+    node: TsNode,
+    caller_id: &str,
+    relpath: &str,
+    src: &[u8],
+    out: &mut Vec<CallRef>,
+) {
+    let mut cursor = node.walk();
+    for child in node.named_children(&mut cursor) {
+        if child.kind() == "call_expression" {
+            if let Some(call_ref) = call_ref_from(child, caller_id, relpath, src) {
+                out.push(call_ref);
+            }
+        }
+        collect_call_refs(child, caller_id, relpath, src, out);
+    }
+}
+
+/// Build a [`CallRef`] from a `call_expression`, or `None` when the callee shape
+/// is unsupported (e.g. generic instantiation, immediately-invoked literal).
+fn call_ref_from(call: TsNode, caller_id: &str, relpath: &str, src: &[u8]) -> Option<CallRef> {
+    let function = call.child_by_field_name("function")?;
+    let (callee_name, package_qualifier, is_method_call) = match function.kind() {
+        // Bare `Name(...)`.
+        "identifier" => (text(function, src).to_string(), None, false),
+        // `X.Name(...)`.
+        "selector_expression" => {
+            let name = text(function.child_by_field_name("field")?, src).to_string();
+            match function.child_by_field_name("operand") {
+                // `ident.Name(...)` — ambiguous package-vs-receiver; resolver decides.
+                Some(op) if op.kind() == "identifier" => {
+                    (name, Some(text(op, src).to_string()), false)
+                }
+                // `<expr>.Name(...)` — definitely a method call, receiver unknown.
+                _ => (name, None, true),
+            }
+        }
+        _ => return None,
+    };
+    Some(CallRef {
+        caller_node_id: caller_id.to_string(),
+        callee_name,
+        package_qualifier,
+        is_method_call,
+        site: CallSite {
+            file: relpath.to_string(),
+            range: node_range(call),
+        },
+    })
 }
 
 /// The receiver base type of a method, with any leading `*` removed (e.g.

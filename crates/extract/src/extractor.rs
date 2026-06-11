@@ -1,9 +1,29 @@
 //! The language-plugin boundary. One implementation (Go) exists now; a second
 //! language will plug in here later without touching the cross-file linker.
 
-use core_ir::Node;
+use core_ir::{CallSite, Node};
 
 use crate::error::ExtractError;
+
+/// A raw, **unresolved** call reference collected from a function/method body.
+/// Resolution into a `calls` edge happens later in [`crate::extract_repo`] against
+/// the full node set — `extract_file` never resolves these (see ADR 0001).
+#[derive(Debug, Clone)]
+pub struct CallRef {
+    /// Node id of the enclosing function/method the call appears in.
+    pub caller_node_id: String,
+    /// The called name (`New`, `Hello`, ...) — the selector's final segment.
+    pub callee_name: String,
+    /// The leading identifier of a `qualifier.Name(...)` call, if any. May be a
+    /// package name (resolves to a Module) or a receiver variable — the resolver
+    /// decides using the file's imports.
+    pub package_qualifier: Option<String>,
+    /// True when the call is syntactically a method call on a non-identifier
+    /// expression (e.g. `a.b.Name()`), so it can never be a package call.
+    pub is_method_call: bool,
+    /// Where the call occurs (0-based).
+    pub site: CallSite,
+}
 
 /// Per-file syntactic facts produced by a [`LanguageExtractor`]. This is
 /// deliberately *local*: no cross-file linking, no edges. The repo-level linker
@@ -19,6 +39,8 @@ pub struct FileExtraction {
     pub imports: Vec<String>,
     /// The declared package name (used to name the directory's `Module` node).
     pub package_name: String,
+    /// Raw, unresolved call references found in this file's bodies.
+    pub calls: Vec<CallRef>,
 }
 
 /// A pluggable, per-language structural extractor.

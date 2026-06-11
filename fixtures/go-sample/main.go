@@ -1,8 +1,13 @@
 package main
 
-import "example.com/sample/greet"
+import (
+	"fmt"
+
+	"example.com/sample/greet"
+)
 
 func main() {
 	g := greet.New("world")
-	_ = g.Hello()
+	fmt.Println(g.Hello())
+	fmt.Println(g.Bye())
 }

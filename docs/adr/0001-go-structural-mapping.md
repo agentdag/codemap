@@ -20,7 +20,7 @@ LSP, no heuristic name matching. Every edge produced here is `resolved`.
 
 Package-level `var`/`const` are skipped this stage.
 
-## Decision — edges (all `confidence = resolved`)
+## Decision — structural edges (`confidence = resolved`)
 - `contains` Module→File, Module→Module (each package dir links to its nearest
   ancestor package dir), File→{Function,Class,Interface,TypeAlias}.
 - Method containment: a Method links to the `Class` whose `qualifiedName` equals
@@ -33,6 +33,29 @@ Package-level `var`/`const` are skipped this stage.
   prefixed by `<modulePath>/`, maps to the corresponding repo directory; if that
   directory is a known package, emit File→Module. Stdlib/external imports are
   skipped.
+
+## Decision — heuristic call graph (`confidence = heuristic`)
+No type checker yet, so call targets can't be resolved precisely — **every**
+`calls` edge is `heuristic`, never `resolved`. `extract_file` collects raw,
+unresolved `CallRef`s per body (`caller_node_id`, `callee_name`, optional
+`package_qualifier`, `is_method_call`, `site`); `extract_repo` resolves them
+against the full node set:
+- `pkg.Name(...)` — `pkg` matched (by declared package name) against the caller
+  file's intra-repo imports → edge to a Function/Method named `Name` in that
+  module (Rule 1).
+- bare `Name(...)` → Function named `Name` in the same package (Rule 2).
+- `recv.Name(...)` / `<expr>.Name(...)` — no receiver type, so match `Name`
+  against Method nodes by name, preferring the caller's package; if multiple
+  match, emit an edge to **each** (fan-out, never silently pick one) (Rule 3).
+- Unresolvable/external (stdlib, aliased-import qualifiers, no matching node):
+  skipped. No `External` nodes are created.
+
+Edges merge multiple sites between the same source+target into one edge (sites
+sorted by `(file, range)`). Calls inside closures/func literals are attributed
+to the enclosing top-level function/method; package-level initializer calls are
+not collected. Aliased imports (`import x "…/pkg"`) are not resolved for calls
+this stage — such qualified calls fall through to Rule 3 (and are skipped unless
+a same-named method exists).
 
 ## Decision — under-specified fields (the spec does not cover directories)
 These are documented choices, not derived from the spec:

@@ -1,6 +1,6 @@
 //! Repository-level extraction: walk the tree, dispatch files to language
-//! extractors, and do all cross-file linking (containment + import resolution).
-//! Every edge produced here is `Confidence::Resolved`.
+//! extractors, and do all cross-file linking. Containment and import edges are
+//! `Confidence::Resolved`; the heuristic call graph is `Confidence::Heuristic`.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -12,7 +12,7 @@ use core_ir::{
 use ignore::WalkBuilder;
 
 use crate::error::ExtractError;
-use crate::extractor::{FileExtraction, LanguageExtractor};
+use crate::extractor::{CallRef, FileExtraction, LanguageExtractor};
 use crate::go::GoExtractor;
 
 const TOOL_VERSION: &str = "0.1.0";
@@ -119,6 +119,8 @@ pub fn extract_repo(root: &Path) -> Result<IrDocument, ExtractError> {
             }
         }
     }
+
+    resolve_calls(&files, &packages, &module_path, &mut edges);
 
     Ok(IrDocument {
         schema_version: SCHEMA_VERSION.to_string(),
@@ -247,6 +249,160 @@ fn resolve_import(import_path: &str, module_path: &str) -> Option<String> {
     import_path
         .strip_prefix(&format!("{module_path}/"))
         .map(|rest| rest.to_string())
+}
+
+/// Symbol indexes used to resolve raw call references.
+#[derive(Default)]
+struct CallIndex {
+    /// (package dir, function name) → Function node ids (Rule 2).
+    functions_in_pkg: BTreeMap<(String, String), Vec<String>>,
+    /// (package dir, name) → Function|Method node ids (Rule 1).
+    callable_in_module: BTreeMap<(String, String), Vec<String>>,
+    /// method name → (package dir, Method node id) (Rule 3).
+    methods_by_name: BTreeMap<String, Vec<(String, String)>>,
+}
+
+/// Resolve every file's raw [`CallRef`]s into heuristic `calls` edges, merging
+/// repeated source→target calls into one edge with multiple sites. Additive: it
+/// only inserts `EdgeKind::Calls` edges and never touches existing ones.
+fn resolve_calls(
+    files: &[ExtractedFile],
+    packages: &BTreeMap<String, String>,
+    module_path: &str,
+    edges: &mut BTreeMap<String, Edge>,
+) {
+    let index = build_call_index(files);
+
+    // (source id, target id) → call sites.
+    let mut call_sites: BTreeMap<(String, String), Vec<CallSite>> = BTreeMap::new();
+    for f in files {
+        // This file's intra-repo imports, keyed by the imported package's name.
+        let mut imported: BTreeMap<String, String> = BTreeMap::new();
+        for raw in &f.extraction.imports {
+            if let Some(dir) = resolve_import(raw, module_path) {
+                if let Some(pkg) = packages.get(&dir) {
+                    imported.insert(pkg.clone(), dir);
+                }
+            }
+        }
+        for call in &f.extraction.calls {
+            for target in resolve_call(call, &f.dir, &imported, &index) {
+                call_sites
+                    .entry((call.caller_node_id.clone(), target))
+                    .or_default()
+                    .push(call.site.clone());
+            }
+        }
+    }
+
+    for ((source, target), mut sites) in call_sites {
+        sites.sort_by_key(site_key);
+        let id = Edge::make_id(&source, EdgeKind::Calls, &target);
+        edges.entry(id.clone()).or_insert(Edge {
+            id,
+            source,
+            target,
+            kind: EdgeKind::Calls,
+            confidence: Confidence::Heuristic,
+            sites,
+            metadata: Metadata::new(),
+        });
+    }
+}
+
+fn build_call_index(files: &[ExtractedFile]) -> CallIndex {
+    let mut index = CallIndex::default();
+    for f in files {
+        for sym in &f.extraction.symbols {
+            let dir = dir_of(&sym.location.file);
+            match sym.kind {
+                NodeKind::Function => {
+                    index
+                        .functions_in_pkg
+                        .entry((dir.clone(), sym.name.clone()))
+                        .or_default()
+                        .push(sym.id.clone());
+                    index
+                        .callable_in_module
+                        .entry((dir, sym.name.clone()))
+                        .or_default()
+                        .push(sym.id.clone());
+                }
+                NodeKind::Method => {
+                    index
+                        .methods_by_name
+                        .entry(sym.name.clone())
+                        .or_default()
+                        .push((dir.clone(), sym.id.clone()));
+                    index
+                        .callable_in_module
+                        .entry((dir, sym.name.clone()))
+                        .or_default()
+                        .push(sym.id.clone());
+                }
+                _ => {}
+            }
+        }
+    }
+    index
+}
+
+/// Apply the heuristic resolution rules to one call reference. Returns every
+/// matching target id (fan-out for ambiguous method calls); empty = skip.
+fn resolve_call(
+    call: &CallRef,
+    caller_dir: &str,
+    imported: &BTreeMap<String, String>,
+    index: &CallIndex,
+) -> Vec<String> {
+    match &call.package_qualifier {
+        Some(qualifier) => match imported.get(qualifier) {
+            // Rule 1: `pkg.Name(...)` → Function/Method named Name in that module.
+            Some(module_dir) => index
+                .callable_in_module
+                .get(&(module_dir.clone(), call.callee_name.clone()))
+                .cloned()
+                .unwrap_or_default(),
+            // Qualifier isn't an imported package → a receiver var; Rule 3.
+            None => method_match(&call.callee_name, caller_dir, index),
+        },
+        // Rule 3: `<expr>.Name(...)` method call.
+        None if call.is_method_call => method_match(&call.callee_name, caller_dir, index),
+        // Rule 2: bare `Name(...)` → Function named Name in the same package.
+        None => index
+            .functions_in_pkg
+            .get(&(caller_dir.to_string(), call.callee_name.clone()))
+            .cloned()
+            .unwrap_or_default(),
+    }
+}
+
+/// Rule 3: match a method name, preferring methods in the caller's package; if
+/// none are in-package, fan out to every same-named method across the repo.
+fn method_match(name: &str, caller_dir: &str, index: &CallIndex) -> Vec<String> {
+    let Some(candidates) = index.methods_by_name.get(name) else {
+        return Vec::new();
+    };
+    let same_pkg: Vec<String> = candidates
+        .iter()
+        .filter(|(dir, _)| dir == caller_dir)
+        .map(|(_, id)| id.clone())
+        .collect();
+    if same_pkg.is_empty() {
+        candidates.iter().map(|(_, id)| id.clone()).collect()
+    } else {
+        same_pkg
+    }
+}
+
+fn site_key(site: &CallSite) -> (String, u32, u32, u32, u32) {
+    (
+        site.file.clone(),
+        site.range.start_line,
+        site.range.start_col,
+        site.range.end_line,
+        site.range.end_col,
+    )
 }
 
 /// Nearest ancestor directory that is also a package.

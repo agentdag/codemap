@@ -73,6 +73,63 @@
       "target": "go:greet/greeter.go#Greeter.Hello"
     },
     {
+      "confidence": "heuristic",
+      "id": "go:main.go#main=[calls]=>go:greet/greeter.go#Greeter.Bye",
+      "kind": "calls",
+      "metadata": {},
+      "sites": [
+        {
+          "file": "main.go",
+          "range": {
+            "endCol": 20,
+            "endLine": 11,
+            "startCol": 13,
+            "startLine": 11
+          }
+        }
+      ],
+      "source": "go:main.go#main",
+      "target": "go:greet/greeter.go#Greeter.Bye"
+    },
+    {
+      "confidence": "heuristic",
+      "id": "go:main.go#main=[calls]=>go:greet/greeter.go#Greeter.Hello",
+      "kind": "calls",
+      "metadata": {},
+      "sites": [
+        {
+          "file": "main.go",
+          "range": {
+            "endCol": 22,
+            "endLine": 10,
+            "startCol": 13,
+            "startLine": 10
+          }
+        }
+      ],
+      "source": "go:main.go#main",
+      "target": "go:greet/greeter.go#Greeter.Hello"
+    },
+    {
+      "confidence": "heuristic",
+      "id": "go:main.go#main=[calls]=>go:greet/greeter.go#New",
+      "kind": "calls",
+      "metadata": {},
+      "sites": [
+        {
+          "file": "main.go",
+          "range": {
+            "endCol": 24,
+            "endLine": 9,
+            "startCol": 6,
+            "startLine": 9
+          }
+        }
+      ],
+      "source": "go:main.go#main",
+      "target": "go:greet/greeter.go#New"
+    },
+    {
       "confidence": "resolved",
       "id": "module:.=[contains]=>file:main.go",
       "kind": "contains",
@@ -120,7 +177,7 @@
       "qualifiedName": ""
     },
     {
-      "contentHash": "7c315d00738295e9b8aa09ff171c964e99a7662fa80e7a734c1d2ad346434b2c",
+      "contentHash": "69aa6a9dc355a87539d671b844d6e851a4694cb83c9b6bd273e8fa20cfeced5d",
       "id": "file:main.go",
       "kind": "File",
       "language": "go",
@@ -128,7 +185,7 @@
         "file": "main.go",
         "range": {
           "endCol": 0,
-          "endLine": 8,
+          "endLine": 13,
           "startCol": 0,
           "startLine": 0
         }
@@ -250,7 +307,7 @@
       "qualifiedName": "Speaker"
     },
     {
-      "contentHash": "b6cd8cc71f3706b5354c55f45c41c0a0efcfc66c33877e0ae248822b3c42a302",
+      "contentHash": "bacd2a737cbb0c0281f971b307a7cf7af40f22172f799599d8dc1562de1918d0",
       "id": "go:main.go#main",
       "kind": "Function",
       "language": "go",
@@ -258,9 +315,9 @@
         "file": "main.go",
         "range": {
           "endCol": 1,
-          "endLine": 7,
+          "endLine": 12,
           "startCol": 0,
-          "startLine": 4
+          "startLine": 8
         }
       },
       "metadata": {},
