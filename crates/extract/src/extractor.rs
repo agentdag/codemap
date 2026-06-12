@@ -1,7 +1,7 @@
 //! The language-plugin boundary. One implementation (Go) exists now; a second
 //! language will plug in here later without touching the cross-file linker.
 
-use core_ir::{CallSite, Node};
+use core_ir::{CallSite, Edge, Node};
 
 use crate::error::ExtractError;
 
@@ -25,19 +25,26 @@ pub struct CallRef {
     pub site: CallSite,
 }
 
-/// Per-file syntactic facts produced by a [`LanguageExtractor`]. This is
-/// deliberately *local*: no cross-file linking, no edges. The repo-level linker
-/// ([`crate::extract_repo`]) turns these into a connected [`core_ir::IrDocument`].
+/// Per-file syntactic facts produced by a [`LanguageExtractor`]. Cross-file
+/// work (containment tree, import/call resolution) stays in the repo-level linker
+/// ([`crate::extract_repo`]); the one exception is [`FileExtraction::edges`],
+/// which an extractor uses for relationships it can resolve *within* one file.
 #[derive(Debug, Clone)]
 pub struct FileExtraction {
     /// The `File` node for this source file.
     pub file_node: Node,
     /// Function/Method/Class/Interface/TypeAlias nodes defined in the file.
-    /// Method nodes carry their receiver type in `metadata["receiver"]`.
+    /// Method nodes may carry their receiver type in `metadata["receiver"]`.
     pub symbols: Vec<Node>,
+    /// Resolved edges the extractor determined lexically within this file (e.g.
+    /// TypeScript `Class`→`Method` containment, where methods nest in the class).
+    /// A node appearing as a `contains` target here is *already parented*, so the
+    /// linker won't re-parent it. Languages without lexical nesting leave this
+    /// empty (Go links methods to receivers in the linker instead).
+    pub edges: Vec<Edge>,
     /// Raw import path strings exactly as written in source (no resolution).
     pub imports: Vec<String>,
-    /// The declared package name (used to name the directory's `Module` node).
+    /// Name used for the directory's `Module` node (Go: package name; TS: dir name).
     pub package_name: String,
     /// Raw, unresolved call references found in this file's bodies.
     pub calls: Vec<CallRef>,

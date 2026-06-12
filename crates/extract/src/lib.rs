@@ -9,8 +9,10 @@ mod extractor;
 mod go;
 mod repo;
 mod time;
+mod ts;
 
 pub use error::ExtractError;
-pub use extractor::{FileExtraction, LanguageExtractor};
+pub use extractor::{CallRef, FileExtraction, LanguageExtractor};
 pub use go::GoExtractor;
 pub use repo::extract_repo;
+pub use ts::TsExtractor;

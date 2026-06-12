@@ -2,7 +2,7 @@
 //! extractors, and do all cross-file linking. Containment and import edges are
 //! `Confidence::Resolved`; the heuristic call graph is `Confidence::Heuristic`.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use core_ir::{
@@ -14,20 +14,24 @@ use ignore::WalkBuilder;
 use crate::error::ExtractError;
 use crate::extractor::{CallRef, FileExtraction, LanguageExtractor};
 use crate::go::GoExtractor;
+use crate::ts::TsExtractor;
 
 const TOOL_VERSION: &str = "0.1.0";
 
-/// One extracted file plus its directory (package) relpath.
+/// One extracted file plus its directory (package) relpath and source language.
 struct ExtractedFile {
     relpath: String,
     dir: String,
+    /// The producing extractor's language tag (e.g. `"go"`, `"ts"`).
+    language: &'static str,
     extraction: FileExtraction,
 }
 
 /// Extract a full repository into a canonical [`IrDocument`].
 pub fn extract_repo(root: &Path) -> Result<IrDocument, ExtractError> {
     let module_path = read_module_path(root)?;
-    let extractors: Vec<Box<dyn LanguageExtractor>> = vec![Box::new(GoExtractor::new())];
+    let extractors: Vec<Box<dyn LanguageExtractor>> =
+        vec![Box::new(GoExtractor::new()), Box::new(TsExtractor::new())];
 
     let files = walk_and_extract(root, &extractors)?;
 
@@ -54,6 +58,18 @@ pub fn extract_repo(root: &Path) -> Result<IrDocument, ExtractError> {
     // Lookup of struct/class nodes by (package dir, type name) for method linking.
     let mut classes: BTreeMap<(String, String), String> = BTreeMap::new();
 
+    // Extractor-resolved intra-file edges (e.g. TS Class→Method). Their `contains`
+    // targets are already parented, so the linker must not re-parent them.
+    let mut parented: BTreeSet<String> = BTreeSet::new();
+    for f in &files {
+        for edge in &f.extraction.edges {
+            if edge.kind == EdgeKind::Contains {
+                parented.insert(edge.target.clone());
+            }
+            edges.entry(edge.id.clone()).or_insert_with(|| edge.clone());
+        }
+    }
+
     // File and symbol nodes + Module→File and File→symbol containment.
     for f in &files {
         nodes.insert(f.extraction.file_node.id.clone(), f.extraction.file_node.clone());
@@ -64,18 +80,20 @@ pub fn extract_repo(root: &Path) -> Result<IrDocument, ExtractError> {
             if sym.kind == NodeKind::Class {
                 classes.insert((f.dir.clone(), sym.qualified_name.clone()), sym.id.clone());
             }
-            // Methods are linked to their class (or filed) in a later pass.
-            if sym.kind != NodeKind::Method {
+            // Methods are linked to their class (or filed) in a later pass; nodes
+            // already parented by the extractor keep that parent.
+            if sym.kind != NodeKind::Method && !parented.contains(&sym.id) {
                 push_contains(&mut edges, &f.extraction.file_node.id, &sym.id);
             }
         }
     }
 
-    // Method containment: Class→Method when the receiver type resolves in-package,
-    // else File→Method with a note.
+    // Method containment for languages that resolve methods by receiver (Go):
+    // Class→Method when the receiver type resolves in-package, else File→Method
+    // with a note. Methods already parented lexically by the extractor are skipped.
     for f in &files {
         for sym in &f.extraction.symbols {
-            if sym.kind != NodeKind::Method {
+            if sym.kind != NodeKind::Method || parented.contains(&sym.id) {
                 continue;
             }
             let receiver = sym
@@ -103,24 +121,34 @@ pub fn extract_repo(root: &Path) -> Result<IrDocument, ExtractError> {
         }
     }
 
-    // Import resolution: File → Module for intra-repo packages only.
+    // Import resolution is language-specific: Go imports target packages
+    // (File→Module); TypeScript imports target files (File→File).
+    let file_ids: BTreeSet<&str> = files.iter().map(|f| f.relpath.as_str()).collect();
     for f in &files {
         for raw in &f.extraction.imports {
-            if let Some(target_dir) = resolve_import(raw, &module_path) {
-                if packages.contains_key(&target_dir) {
-                    push_edge(
-                        &mut edges,
-                        &f.extraction.file_node.id,
-                        EdgeKind::Imports,
-                        &module_id(&target_dir),
-                        Metadata::new(),
-                    );
-                }
+            let target = match f.language {
+                "go" => module_path
+                    .as_deref()
+                    .and_then(|mp| resolve_import(raw, mp))
+                    .filter(|dir| packages.contains_key(dir))
+                    .map(|dir| module_id(&dir)),
+                "ts" => resolve_ts_import(raw, &f.dir, &file_ids)
+                    .map(|relpath| Node::make_id(NodeKind::File, "ts", &relpath, "")),
+                _ => None,
+            };
+            if let Some(target) = target {
+                push_edge(
+                    &mut edges,
+                    &f.extraction.file_node.id,
+                    EdgeKind::Imports,
+                    &target,
+                    Metadata::new(),
+                );
             }
         }
     }
 
-    resolve_calls(&files, &packages, &module_path, &mut edges);
+    resolve_calls(&files, &packages, module_path.as_deref().unwrap_or(""), &mut edges);
 
     Ok(IrDocument {
         schema_version: SCHEMA_VERSION.to_string(),
@@ -158,10 +186,12 @@ fn walk_and_extract(
             path: path.to_path_buf(),
             source: e,
         })?;
+        let language = extractor.language();
         let extraction = extractor.extract_file(&relpath, &source)?;
         out.push(ExtractedFile {
             dir: dir_of(&relpath),
             relpath,
+            language,
             extraction,
         });
     }
@@ -239,6 +269,40 @@ fn push_edge(
         sites: Vec::<CallSite>::new(),
         metadata,
     });
+}
+
+/// Resolve a TypeScript *relative* import specifier (`./x`, `../x`) to a repo
+/// file relpath, trying `.ts`, `.tsx`, then `/index.ts`. Returns `None` for bare
+/// / node_modules specifiers (skipped) or unresolved targets. tsconfig path
+/// aliases are deferred (see ADR 0002).
+fn resolve_ts_import(spec: &str, from_dir: &str, file_ids: &BTreeSet<&str>) -> Option<String> {
+    if !(spec.starts_with("./") || spec.starts_with("../")) {
+        return None;
+    }
+    let base = normalize_rel(from_dir, spec);
+    [format!("{base}.ts"), format!("{base}.tsx"), format!("{base}/index.ts")]
+        .into_iter()
+        .find(|candidate| file_ids.contains(candidate.as_str()))
+}
+
+/// Join `base_dir` with a relative specifier and collapse `.`/`..` segments,
+/// yielding a forward-slash relpath (no extension).
+fn normalize_rel(base_dir: &str, spec: &str) -> String {
+    let mut parts: Vec<&str> = if base_dir == "." {
+        Vec::new()
+    } else {
+        base_dir.split('/').collect()
+    };
+    for part in spec.split('/') {
+        match part {
+            "" | "." => {}
+            ".." => {
+                parts.pop();
+            }
+            other => parts.push(other),
+        }
+    }
+    parts.join("/")
 }
 
 /// Map an import path to a repo directory, or `None` for stdlib/external.
@@ -452,11 +516,14 @@ fn rel_to_slash(path: &Path, root: &Path) -> String {
         .replace(std::path::MAIN_SEPARATOR, "/")
 }
 
-/// Read the `module <path>` directive from `<root>/go.mod`.
-fn read_module_path(root: &Path) -> Result<String, ExtractError> {
+/// Read the `module <path>` directive from `<root>/go.mod`. Returns `None` when
+/// there is no `go.mod` (e.g. a TypeScript-only repo) — Go import resolution is
+/// simply skipped in that case. An existing `go.mod` without a `module` line is
+/// still an error.
+fn read_module_path(root: &Path) -> Result<Option<String>, ExtractError> {
     let go_mod: PathBuf = root.join("go.mod");
     if !go_mod.exists() {
-        return Err(ExtractError::GoModMissing(go_mod));
+        return Ok(None);
     }
     let content = std::fs::read_to_string(&go_mod).map_err(|e| ExtractError::Io {
         path: go_mod.clone(),
@@ -465,7 +532,7 @@ fn read_module_path(root: &Path) -> Result<String, ExtractError> {
     for line in content.lines() {
         if let Some(rest) = line.trim().strip_prefix("module ") {
             if let Some(path) = rest.split_whitespace().next() {
-                return Ok(path.to_string());
+                return Ok(Some(path.to_string()));
             }
         }
     }

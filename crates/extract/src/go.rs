@@ -98,6 +98,8 @@ impl LanguageExtractor for GoExtractor {
         Ok(FileExtraction {
             file_node,
             symbols,
+            // Go method→class linking happens in the linker (by receiver), not here.
+            edges: Vec::new(),
             imports,
             package_name,
             calls,

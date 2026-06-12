@@ -1,0 +1,309 @@
+{
+  "edges": [
+    {
+      "confidence": "resolved",
+      "id": "file:index.ts=[contains]=>ts:index.ts#AppConfig",
+      "kind": "contains",
+      "metadata": {},
+      "sites": [],
+      "source": "file:index.ts",
+      "target": "ts:index.ts#AppConfig"
+    },
+    {
+      "confidence": "resolved",
+      "id": "file:index.ts=[contains]=>ts:index.ts#makeUser",
+      "kind": "contains",
+      "metadata": {},
+      "sites": [],
+      "source": "file:index.ts",
+      "target": "ts:index.ts#makeUser"
+    },
+    {
+      "confidence": "resolved",
+      "id": "file:index.ts=[imports]=>file:models/user.ts",
+      "kind": "imports",
+      "metadata": {},
+      "sites": [],
+      "source": "file:index.ts",
+      "target": "file:models/user.ts"
+    },
+    {
+      "confidence": "resolved",
+      "id": "file:models/user.ts=[contains]=>ts:models/user.ts#Named",
+      "kind": "contains",
+      "metadata": {},
+      "sites": [],
+      "source": "file:models/user.ts",
+      "target": "ts:models/user.ts#Named"
+    },
+    {
+      "confidence": "resolved",
+      "id": "file:models/user.ts=[contains]=>ts:models/user.ts#User",
+      "kind": "contains",
+      "metadata": {},
+      "sites": [],
+      "source": "file:models/user.ts",
+      "target": "ts:models/user.ts#User"
+    },
+    {
+      "confidence": "resolved",
+      "id": "file:models/user.ts=[contains]=>ts:models/user.ts#UserId",
+      "kind": "contains",
+      "metadata": {},
+      "sites": [],
+      "source": "file:models/user.ts",
+      "target": "ts:models/user.ts#UserId"
+    },
+    {
+      "confidence": "resolved",
+      "id": "module:.=[contains]=>file:index.ts",
+      "kind": "contains",
+      "metadata": {},
+      "sites": [],
+      "source": "module:.",
+      "target": "file:index.ts"
+    },
+    {
+      "confidence": "resolved",
+      "id": "module:.=[contains]=>module:models",
+      "kind": "contains",
+      "metadata": {},
+      "sites": [],
+      "source": "module:.",
+      "target": "module:models"
+    },
+    {
+      "confidence": "resolved",
+      "id": "module:models=[contains]=>file:models/user.ts",
+      "kind": "contains",
+      "metadata": {},
+      "sites": [],
+      "source": "module:models",
+      "target": "file:models/user.ts"
+    },
+    {
+      "confidence": "resolved",
+      "id": "ts:models/user.ts#User=[contains]=>ts:models/user.ts#User.greet",
+      "kind": "contains",
+      "metadata": {},
+      "sites": [],
+      "source": "ts:models/user.ts#User",
+      "target": "ts:models/user.ts#User.greet"
+    },
+    {
+      "confidence": "resolved",
+      "id": "ts:models/user.ts#User=[contains]=>ts:models/user.ts#User.rename",
+      "kind": "contains",
+      "metadata": {},
+      "sites": [],
+      "source": "ts:models/user.ts#User",
+      "target": "ts:models/user.ts#User.rename"
+    }
+  ],
+  "nodes": [
+    {
+      "contentHash": "2727e6902d249e23b72d98f70ca057b72e397df1731f05cafe49ef550340ae40",
+      "id": "file:index.ts",
+      "kind": "File",
+      "language": "ts",
+      "location": {
+        "file": "index.ts",
+        "range": {
+          "endCol": 0,
+          "endLine": 11,
+          "startCol": 0,
+          "startLine": 0
+        }
+      },
+      "metadata": {},
+      "name": "index.ts",
+      "qualifiedName": ""
+    },
+    {
+      "contentHash": "839ffc468aa3d3b66fac41dff7687e0b6be06b221840411ecbd69211f26edbbf",
+      "id": "file:models/user.ts",
+      "kind": "File",
+      "language": "ts",
+      "location": {
+        "file": "models/user.ts",
+        "range": {
+          "endCol": 0,
+          "endLine": 17,
+          "startCol": 0,
+          "startLine": 0
+        }
+      },
+      "metadata": {},
+      "name": "user.ts",
+      "qualifiedName": ""
+    },
+    {
+      "contentHash": "",
+      "id": "module:.",
+      "kind": "Module",
+      "language": "go",
+      "location": {
+        "file": ".",
+        "range": {
+          "endCol": 0,
+          "endLine": 0,
+          "startCol": 0,
+          "startLine": 0
+        }
+      },
+      "metadata": {},
+      "name": ".",
+      "qualifiedName": ""
+    },
+    {
+      "contentHash": "",
+      "id": "module:models",
+      "kind": "Module",
+      "language": "go",
+      "location": {
+        "file": "models",
+        "range": {
+          "endCol": 0,
+          "endLine": 0,
+          "startCol": 0,
+          "startLine": 0
+        }
+      },
+      "metadata": {},
+      "name": "models",
+      "qualifiedName": ""
+    },
+    {
+      "contentHash": "fbd5e868c0daf3c0241d8c67e562d246966c4c4f356e96cbef51fa50f7d2cc7b",
+      "id": "ts:index.ts#AppConfig",
+      "kind": "Interface",
+      "language": "ts",
+      "location": {
+        "file": "index.ts",
+        "range": {
+          "endCol": 1,
+          "endLine": 10,
+          "startCol": 7,
+          "startLine": 8
+        }
+      },
+      "metadata": {},
+      "name": "AppConfig",
+      "qualifiedName": "AppConfig"
+    },
+    {
+      "contentHash": "3c14ba5e12752d59ae3c2d76416cc41edfcca4ba367d3832fc836b98b8f9ecb2",
+      "id": "ts:index.ts#makeUser",
+      "kind": "Function",
+      "language": "ts",
+      "location": {
+        "file": "index.ts",
+        "range": {
+          "endCol": 1,
+          "endLine": 6,
+          "startCol": 7,
+          "startLine": 2
+        }
+      },
+      "metadata": {},
+      "name": "makeUser",
+      "qualifiedName": "makeUser"
+    },
+    {
+      "contentHash": "23911b6474865a23e4f27a1930a11a23fe29463eef20d86d84c67afa8d38920c",
+      "id": "ts:models/user.ts#Named",
+      "kind": "Interface",
+      "language": "ts",
+      "location": {
+        "file": "models/user.ts",
+        "range": {
+          "endCol": 1,
+          "endLine": 2,
+          "startCol": 7,
+          "startLine": 0
+        }
+      },
+      "metadata": {},
+      "name": "Named",
+      "qualifiedName": "Named"
+    },
+    {
+      "contentHash": "924b99b26da898b9999059e74d8a1e8a9a915d954fb3a95ee3f50ae05efe73f9",
+      "id": "ts:models/user.ts#User",
+      "kind": "Class",
+      "language": "ts",
+      "location": {
+        "file": "models/user.ts",
+        "range": {
+          "endCol": 1,
+          "endLine": 16,
+          "startCol": 7,
+          "startLine": 6
+        }
+      },
+      "metadata": {},
+      "name": "User",
+      "qualifiedName": "User"
+    },
+    {
+      "contentHash": "fdfd0c1b26b1e566e1b1395215f7edeb73794f727206bdfff61e68adfdf4cd28",
+      "id": "ts:models/user.ts#User.greet",
+      "kind": "Method",
+      "language": "ts",
+      "location": {
+        "file": "models/user.ts",
+        "range": {
+          "endCol": 3,
+          "endLine": 11,
+          "startCol": 2,
+          "startLine": 9
+        }
+      },
+      "metadata": {},
+      "name": "greet",
+      "qualifiedName": "User.greet"
+    },
+    {
+      "contentHash": "026d21dfdc22a2ff2db92a9fcb2dee7fd023d26be5f5161ecc97017423caec26",
+      "id": "ts:models/user.ts#User.rename",
+      "kind": "Method",
+      "language": "ts",
+      "location": {
+        "file": "models/user.ts",
+        "range": {
+          "endCol": 3,
+          "endLine": 15,
+          "startCol": 2,
+          "startLine": 13
+        }
+      },
+      "metadata": {},
+      "name": "rename",
+      "qualifiedName": "User.rename"
+    },
+    {
+      "contentHash": "ec9a8f81a4abdfae4ca0357a53869338d9b2763030e1935fcced9bc3d56b733f",
+      "id": "ts:models/user.ts#UserId",
+      "kind": "TypeAlias",
+      "language": "ts",
+      "location": {
+        "file": "models/user.ts",
+        "range": {
+          "endCol": 37,
+          "endLine": 4,
+          "startCol": 7,
+          "startLine": 4
+        }
+      },
+      "metadata": {},
+      "name": "UserId",
+      "qualifiedName": "UserId"
+    }
+  ],
+  "root": {
+    "analyzedAt": "1970-01-01T00:00:00Z",
+    "repoPath": "ts-sample",
+    "toolVersion": "0.1.0"
+  },
+  "schemaVersion": "0.1.0"
+}
