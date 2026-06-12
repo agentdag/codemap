@@ -12,3 +12,5 @@
 
 # Compiled stack traces dumped by rustc during an internal compiler error
 rustc-ice-*.txt
+
+node_modules
