@@ -54,6 +54,14 @@ This prints the extracted IR as canonical JSON.
 - [ ] Service-boundary detection
 - [ ] Framework-aware scaffolding
 
+## CI 
+
+- Two things to add later, not now:
+
+> OS matrix — when the Tauri app arrives and cross-platform matters, swap runs-on: ubuntu-latest for runs-on: `${{ matrix.os }}` with `strategy.matrix.os: [ubuntu-latest, macos-latest, windows-latest]`. 
+
+> A JS job — once apps/viewer exists, add a second job for pnpm install + typecheck + build. No point until the viewer is in.
+
 ## License
 
 See [LICENSE](LICENSE).
