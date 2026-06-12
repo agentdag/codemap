@@ -37,6 +37,8 @@ pub fn extract_repo(root: &Path) -> Result<IrDocument, ExtractError> {
 
     // Directory (package) → chosen package name. BTreeMap keeps it deterministic.
     let packages = collect_packages(&files);
+    // Directory → its language, derived from the files directly within it.
+    let dir_languages = collect_dir_languages(&files);
 
     // Dedup nodes/edges by id; canonical serialization re-sorts regardless.
     let mut nodes: BTreeMap<String, Node> = BTreeMap::new();
@@ -44,7 +46,8 @@ pub fn extract_repo(root: &Path) -> Result<IrDocument, ExtractError> {
 
     // Module nodes.
     for (dir, pkg) in &packages {
-        let node = module_node(dir, pkg);
+        let language = dir_languages.get(dir).copied().unwrap_or("");
+        let node = module_node(dir, pkg, language);
         nodes.insert(node.id.clone(), node);
     }
 
@@ -222,13 +225,34 @@ fn collect_packages(files: &[ExtractedFile]) -> BTreeMap<String, String> {
     packages
 }
 
-fn module_node(dir: &str, package: &str) -> Node {
+/// Derive each directory's language from the files directly within it: a single
+/// shared language wins; a directory with mixed (or no) languages maps to `""`.
+/// A `Module` is not intrinsically one language, so this is not hardcoded.
+fn collect_dir_languages(files: &[ExtractedFile]) -> BTreeMap<String, &'static str> {
+    let mut by_dir: BTreeMap<String, BTreeSet<&'static str>> = BTreeMap::new();
+    for f in files {
+        by_dir.entry(f.dir.clone()).or_default().insert(f.language);
+    }
+    by_dir
+        .into_iter()
+        .map(|(dir, langs)| {
+            let language = if langs.len() == 1 {
+                langs.into_iter().next().unwrap_or("")
+            } else {
+                ""
+            };
+            (dir, language)
+        })
+        .collect()
+}
+
+fn module_node(dir: &str, package: &str, language: &str) -> Node {
     Node {
         id: module_id(dir),
         kind: NodeKind::Module,
         name: package.to_string(),
         qualified_name: String::new(),
-        language: "go".to_string(),
+        language: language.to_string(),
         location: Location {
             file: dir.to_string(),
             range: Range {

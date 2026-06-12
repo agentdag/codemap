@@ -141,7 +141,7 @@
       "contentHash": "",
       "id": "module:.",
       "kind": "Module",
-      "language": "go",
+      "language": "ts",
       "location": {
         "file": ".",
         "range": {
@@ -159,7 +159,7 @@
       "contentHash": "",
       "id": "module:models",
       "kind": "Module",
-      "language": "go",
+      "language": "ts",
       "location": {
         "file": "models",
         "range": {
