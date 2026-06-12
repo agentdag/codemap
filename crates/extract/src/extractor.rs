@@ -25,6 +25,17 @@ pub struct CallRef {
     pub site: CallSite,
 }
 
+/// A named import binding: a local name brought into a file from a specifier.
+/// Used to resolve bare calls to imported symbols (e.g. TypeScript Rule 1b).
+/// `local` is the in-scope name (the alias if `import { a as b }`), `imported`
+/// is the name exported by the target module.
+#[derive(Debug, Clone)]
+pub struct ImportBinding {
+    pub local: String,
+    pub imported: String,
+    pub specifier: String,
+}
+
 /// Per-file syntactic facts produced by a [`LanguageExtractor`]. Cross-file
 /// work (containment tree, import/call resolution) stays in the repo-level linker
 /// ([`crate::extract_repo`]); the one exception is [`FileExtraction::edges`],
@@ -44,6 +55,9 @@ pub struct FileExtraction {
     pub edges: Vec<Edge>,
     /// Raw import path strings exactly as written in source (no resolution).
     pub imports: Vec<String>,
+    /// Named import bindings (local → imported name + specifier), for resolving
+    /// bare calls to imported symbols. Empty for languages that don't need it.
+    pub import_bindings: Vec<ImportBinding>,
     /// Name used for the directory's `Module` node (Go: package name; TS: dir name).
     pub package_name: String,
     /// Raw, unresolved call references found in this file's bodies.

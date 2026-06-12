@@ -101,6 +101,8 @@ impl LanguageExtractor for GoExtractor {
             // Go method→class linking happens in the linker (by receiver), not here.
             edges: Vec::new(),
             imports,
+            // Go resolves package-qualified calls via package name, not bindings.
+            import_bindings: Vec::new(),
             package_name,
             calls,
         })

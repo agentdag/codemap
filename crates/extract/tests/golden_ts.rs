@@ -62,11 +62,35 @@ fn ts_has_lexical_class_method_and_file_imports() {
             && e.confidence == Confidence::Resolved
     });
     assert!(file_import, "expected resolved File→File import edge");
+}
 
-    // No calls this stage.
+#[test]
+fn ts_calls_are_heuristic_with_expected_targets() {
+    let doc = extract_repo(Path::new(FIXTURE)).expect("extract_repo");
+    let calls: Vec<_> = doc.edges.iter().filter(|e| e.kind == EdgeKind::Calls).collect();
+
+    // Every calls edge is heuristic (cardinal rule), with at least one site.
+    assert!(!calls.is_empty(), "expected heuristic calls edges");
+    for e in &calls {
+        assert_eq!(e.confidence, Confidence::Heuristic, "calls must be heuristic: {}", e.id);
+        assert!(!e.sites.is_empty(), "calls edge needs a site: {}", e.id);
+    }
+
+    let has = |src_suffix: &str, tgt_suffix: &str| {
+        calls
+            .iter()
+            .any(|e| e.source.ends_with(src_suffix) && e.target.ends_with(tgt_suffix))
+    };
+    // Cross-file imported call (Rule 1b), method calls (Rule 2), same-file (Rule 1a).
+    assert!(has("#makeUser", "#defaultUser"), "expected makeUser → defaultUser (import)");
+    assert!(has("#makeUser", "#User.rename"), "expected makeUser → User.rename (method)");
+    assert!(has("#makeUser", "#User.greet"), "expected makeUser → User.greet (method)");
+    assert!(has("#defaultUser", "#build"), "expected defaultUser → build (same file)");
+
+    // Builtins/externals skipped: no edge whose target looks like console/String/new.
     assert!(
-        doc.edges.iter().all(|e| e.kind != EdgeKind::Calls),
-        "no calls edges expected for TypeScript this stage"
+        !calls.iter().any(|e| e.target.contains("console") || e.target.contains("String")),
+        "builtins must not be linked"
     );
 }
 

@@ -5,8 +5,9 @@ Date: 2026-06-12
 
 ## Context
 Second language (TypeScript), added to prove the `LanguageExtractor` boundary
-generalizes beyond Go. Scope: **structure + imports only** (no calls). All edges
-this stage are `resolved`. See ADR 0001 for the Go mapping and shared decisions.
+generalizes beyond Go. Structure + imports landed first (containment/import edges
+are `resolved`); a later additive pass added the heuristic call graph (`calls`
+edges are `heuristic`). See ADR 0001 for the Go mapping and shared decisions.
 
 ## Boundary outcome (the point of this stage)
 TypeScript was expressed **without changing the `LanguageExtractor` trait or the
@@ -42,6 +43,26 @@ Language tag on nodes/ids is `ts` (e.g. `ts:models/user.ts#User.greet`).
 Relative specifiers (`./x`, `../x`) resolve against the importing file's
 directory, trying `<p>.ts`, `<p>.tsx`, then `<p>/index.ts`; a hit emits
 `File`→`File`. Bare / `node_modules` specifiers are skipped (like Go stdlib).
+
+## Decision — heuristic call graph (`confidence = heuristic`)
+Mirrors the Go calls stage: no type checker, so **every** `calls` edge is
+`heuristic`. `extract_file` collects raw, unresolved `CallRef`s per body
+(recursing into nested calls, so `console.log(u.greet())` yields the inner
+`u.greet()`); `extract_repo` resolves them against the full node set:
+- **Bare `foo(...)`** — (1a) a Function named `foo` in the **same file**; else
+  (1b) an imported symbol `foo`, resolved through the file's *named* import
+  bindings (`local → imported name + specifier`) to the exported Function in the
+  target file. This is TS's analog of Go's package-qualified call.
+- **`obj.method(...)`** — no types, so match `method` against `Method` nodes by
+  name, preferring the caller's module; multiple matches **fan out** (one edge
+  each, never silently picked).
+- **Unresolvable / external / builtins** (`console.log`, `node_modules`, no
+  matching repo node) — skipped. No `External` nodes.
+
+Repeated source→target calls merge into one edge with multiple sorted sites.
+Call-graph deferrals: `new X()` constructors (they parse as `new_expression`,
+not calls, so naturally excluded), dynamic/computed calls, namespace-import
+member calls (`ns.foo()`), default-import and re-export bindings.
 
 ## Decision — `go.mod` is now optional
 `extract_repo` no longer requires `go.mod`; it's only read for Go import

@@ -15,3 +15,11 @@ export class User {
     this.id = next;
   }
 }
+
+export function defaultUser(): User {
+  return build();
+}
+
+function build(): User {
+  return new User();
+}

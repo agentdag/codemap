@@ -56,6 +56,24 @@
     },
     {
       "confidence": "resolved",
+      "id": "file:models/user.ts=[contains]=>ts:models/user.ts#build",
+      "kind": "contains",
+      "metadata": {},
+      "sites": [],
+      "source": "file:models/user.ts",
+      "target": "ts:models/user.ts#build"
+    },
+    {
+      "confidence": "resolved",
+      "id": "file:models/user.ts=[contains]=>ts:models/user.ts#defaultUser",
+      "kind": "contains",
+      "metadata": {},
+      "sites": [],
+      "source": "file:models/user.ts",
+      "target": "ts:models/user.ts#defaultUser"
+    },
+    {
+      "confidence": "resolved",
       "id": "module:.=[contains]=>file:index.ts",
       "kind": "contains",
       "metadata": {},
@@ -82,6 +100,63 @@
       "target": "file:models/user.ts"
     },
     {
+      "confidence": "heuristic",
+      "id": "ts:index.ts#makeUser=[calls]=>ts:models/user.ts#User.greet",
+      "kind": "calls",
+      "metadata": {},
+      "sites": [
+        {
+          "file": "index.ts",
+          "range": {
+            "endCol": 23,
+            "endLine": 5,
+            "startCol": 14,
+            "startLine": 5
+          }
+        }
+      ],
+      "source": "ts:index.ts#makeUser",
+      "target": "ts:models/user.ts#User.greet"
+    },
+    {
+      "confidence": "heuristic",
+      "id": "ts:index.ts#makeUser=[calls]=>ts:models/user.ts#User.rename",
+      "kind": "calls",
+      "metadata": {},
+      "sites": [
+        {
+          "file": "index.ts",
+          "range": {
+            "endCol": 22,
+            "endLine": 4,
+            "startCol": 2,
+            "startLine": 4
+          }
+        }
+      ],
+      "source": "ts:index.ts#makeUser",
+      "target": "ts:models/user.ts#User.rename"
+    },
+    {
+      "confidence": "heuristic",
+      "id": "ts:index.ts#makeUser=[calls]=>ts:models/user.ts#defaultUser",
+      "kind": "calls",
+      "metadata": {},
+      "sites": [
+        {
+          "file": "index.ts",
+          "range": {
+            "endCol": 25,
+            "endLine": 3,
+            "startCol": 12,
+            "startLine": 3
+          }
+        }
+      ],
+      "source": "ts:index.ts#makeUser",
+      "target": "ts:models/user.ts#defaultUser"
+    },
+    {
       "confidence": "resolved",
       "id": "ts:models/user.ts#User=[contains]=>ts:models/user.ts#User.greet",
       "kind": "contains",
@@ -98,11 +173,30 @@
       "sites": [],
       "source": "ts:models/user.ts#User",
       "target": "ts:models/user.ts#User.rename"
+    },
+    {
+      "confidence": "heuristic",
+      "id": "ts:models/user.ts#defaultUser=[calls]=>ts:models/user.ts#build",
+      "kind": "calls",
+      "metadata": {},
+      "sites": [
+        {
+          "file": "models/user.ts",
+          "range": {
+            "endCol": 16,
+            "endLine": 19,
+            "startCol": 9,
+            "startLine": 19
+          }
+        }
+      ],
+      "source": "ts:models/user.ts#defaultUser",
+      "target": "ts:models/user.ts#build"
     }
   ],
   "nodes": [
     {
-      "contentHash": "2727e6902d249e23b72d98f70ca057b72e397df1731f05cafe49ef550340ae40",
+      "contentHash": "33241c07b792760f77c4b7c64ba825dda3c6bead9d21ebd95d3d90f2d51d7b67",
       "id": "file:index.ts",
       "kind": "File",
       "language": "ts",
@@ -110,7 +204,7 @@
         "file": "index.ts",
         "range": {
           "endCol": 0,
-          "endLine": 11,
+          "endLine": 12,
           "startCol": 0,
           "startLine": 0
         }
@@ -120,7 +214,7 @@
       "qualifiedName": ""
     },
     {
-      "contentHash": "839ffc468aa3d3b66fac41dff7687e0b6be06b221840411ecbd69211f26edbbf",
+      "contentHash": "5e64b5a3febde49aa8bb36a404725195e8d357696430ac7e081689c73b82fa03",
       "id": "file:models/user.ts",
       "kind": "File",
       "language": "ts",
@@ -128,7 +222,7 @@
         "file": "models/user.ts",
         "range": {
           "endCol": 0,
-          "endLine": 17,
+          "endLine": 25,
           "startCol": 0,
           "startLine": 0
         }
@@ -182,9 +276,9 @@
         "file": "index.ts",
         "range": {
           "endCol": 1,
-          "endLine": 10,
+          "endLine": 11,
           "startCol": 7,
-          "startLine": 8
+          "startLine": 9
         }
       },
       "metadata": {},
@@ -192,7 +286,7 @@
       "qualifiedName": "AppConfig"
     },
     {
-      "contentHash": "3c14ba5e12752d59ae3c2d76416cc41edfcca4ba367d3832fc836b98b8f9ecb2",
+      "contentHash": "41cda3cde65cbd5440ff029cc22144ec7e78df7765ee2bf1d6a76de2e875500d",
       "id": "ts:index.ts#makeUser",
       "kind": "Function",
       "language": "ts",
@@ -200,7 +294,7 @@
         "file": "index.ts",
         "range": {
           "endCol": 1,
-          "endLine": 6,
+          "endLine": 7,
           "startCol": 7,
           "startLine": 2
         }
@@ -298,6 +392,42 @@
       "metadata": {},
       "name": "UserId",
       "qualifiedName": "UserId"
+    },
+    {
+      "contentHash": "7c047ba20016ecb9a847c0303145992fefd36f82ec7bdf655e2126423fd950ee",
+      "id": "ts:models/user.ts#build",
+      "kind": "Function",
+      "language": "ts",
+      "location": {
+        "file": "models/user.ts",
+        "range": {
+          "endCol": 1,
+          "endLine": 24,
+          "startCol": 0,
+          "startLine": 22
+        }
+      },
+      "metadata": {},
+      "name": "build",
+      "qualifiedName": "build"
+    },
+    {
+      "contentHash": "f2fd768e9166d2b22ed01f93d2e86dd1c0a57c1df9520b4a5f08124e88b66657",
+      "id": "ts:models/user.ts#defaultUser",
+      "kind": "Function",
+      "language": "ts",
+      "location": {
+        "file": "models/user.ts",
+        "range": {
+          "endCol": 1,
+          "endLine": 20,
+          "startCol": 7,
+          "startLine": 18
+        }
+      },
+      "metadata": {},
+      "name": "defaultUser",
+      "qualifiedName": "defaultUser"
     }
   ],
   "root": {

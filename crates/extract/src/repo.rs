@@ -12,7 +12,7 @@ use core_ir::{
 use ignore::WalkBuilder;
 
 use crate::error::ExtractError;
-use crate::extractor::{CallRef, FileExtraction, LanguageExtractor};
+use crate::extractor::{CallRef, FileExtraction, ImportBinding, LanguageExtractor};
 use crate::go::GoExtractor;
 use crate::ts::TsExtractor;
 
@@ -342,12 +342,14 @@ fn resolve_import(import_path: &str, module_path: &str) -> Option<String> {
 /// Symbol indexes used to resolve raw call references.
 #[derive(Default)]
 struct CallIndex {
-    /// (package dir, function name) → Function node ids (Rule 2).
+    /// (package dir, function name) → Function node ids (Go Rule 2).
     functions_in_pkg: BTreeMap<(String, String), Vec<String>>,
-    /// (package dir, name) → Function|Method node ids (Rule 1).
+    /// (package dir, name) → Function|Method node ids (Go Rule 1).
     callable_in_module: BTreeMap<(String, String), Vec<String>>,
-    /// method name → (package dir, Method node id) (Rule 3).
+    /// method name → (package dir, Method node id) (Go Rule 3 / TS Rule 2).
     methods_by_name: BTreeMap<String, Vec<(String, String)>>,
+    /// (file relpath, function name) → Function node ids (TS Rule 1a/1b).
+    functions_by_file: BTreeMap<(String, String), Vec<String>>,
 }
 
 /// Resolve every file's raw [`CallRef`]s into heuristic `calls` edges, merging
@@ -360,21 +362,37 @@ fn resolve_calls(
     edges: &mut BTreeMap<String, Edge>,
 ) {
     let index = build_call_index(files);
+    let file_ids: BTreeSet<&str> = files.iter().map(|f| f.relpath.as_str()).collect();
 
     // (source id, target id) → call sites.
     let mut call_sites: BTreeMap<(String, String), Vec<CallSite>> = BTreeMap::new();
     for f in files {
-        // This file's intra-repo imports, keyed by the imported package's name.
-        let mut imported: BTreeMap<String, String> = BTreeMap::new();
-        for raw in &f.extraction.imports {
-            if let Some(dir) = resolve_import(raw, module_path) {
-                if let Some(pkg) = packages.get(&dir) {
-                    imported.insert(pkg.clone(), dir);
+        // This file's intra-repo imports, keyed by package name (Go only).
+        let mut go_imported: BTreeMap<String, String> = BTreeMap::new();
+        if f.language == "go" {
+            for raw in &f.extraction.imports {
+                if let Some(dir) = resolve_import(raw, module_path) {
+                    if let Some(pkg) = packages.get(&dir) {
+                        go_imported.insert(pkg.clone(), dir);
+                    }
                 }
             }
         }
         for call in &f.extraction.calls {
-            for target in resolve_call(call, &f.dir, &imported, &index) {
+            // Resolution is language-specific; each branch only matches repo nodes.
+            let targets = match f.language {
+                "go" => resolve_call(call, &f.dir, &go_imported, &index),
+                "ts" => resolve_call_ts(
+                    call,
+                    &f.relpath,
+                    &f.dir,
+                    &f.extraction.import_bindings,
+                    &file_ids,
+                    &index,
+                ),
+                _ => Vec::new(),
+            };
+            for target in targets {
                 call_sites
                     .entry((call.caller_node_id.clone(), target))
                     .or_default()
@@ -413,6 +431,11 @@ fn build_call_index(files: &[ExtractedFile]) -> CallIndex {
                     index
                         .callable_in_module
                         .entry((dir, sym.name.clone()))
+                        .or_default()
+                        .push(sym.id.clone());
+                    index
+                        .functions_by_file
+                        .entry((sym.location.file.clone(), sym.name.clone()))
                         .or_default()
                         .push(sym.id.clone());
                 }
@@ -465,8 +488,47 @@ fn resolve_call(
     }
 }
 
-/// Rule 3: match a method name, preferring methods in the caller's package; if
-/// none are in-package, fan out to every same-named method across the repo.
+/// Apply the TypeScript heuristic call rules (ADR 0002). Returns matching target
+/// ids (method calls fan out); empty = skip.
+fn resolve_call_ts(
+    call: &CallRef,
+    caller_file: &str,
+    caller_dir: &str,
+    bindings: &[ImportBinding],
+    file_ids: &BTreeSet<&str>,
+    index: &CallIndex,
+) -> Vec<String> {
+    // Rule 2: `obj.method(...)` → match Method nodes by name (no type info).
+    if call.is_method_call {
+        return method_match(&call.callee_name, caller_dir, index);
+    }
+    // Rule 1a: bare `foo(...)` → Function named foo in the same file.
+    let same_file = index
+        .functions_by_file
+        .get(&(caller_file.to_string(), call.callee_name.clone()))
+        .cloned()
+        .unwrap_or_default();
+    if !same_file.is_empty() {
+        return same_file;
+    }
+    // Rule 1b: an imported symbol foo → exported Function in the target file.
+    for binding in bindings.iter().filter(|b| b.local == call.callee_name) {
+        if let Some(target_file) = resolve_ts_import(&binding.specifier, caller_dir, file_ids) {
+            let ids = index
+                .functions_by_file
+                .get(&(target_file, binding.imported.clone()))
+                .cloned()
+                .unwrap_or_default();
+            if !ids.is_empty() {
+                return ids;
+            }
+        }
+    }
+    Vec::new()
+}
+
+/// Rule 3 (Go) / Rule 2 (TS): match a method name, preferring methods in the
+/// caller's package; if none are in-package, fan out to every same-named method.
 fn method_match(name: &str, caller_dir: &str, index: &CallIndex) -> Vec<String> {
     let Some(candidates) = index.methods_by_name.get(name) else {
         return Vec::new();
