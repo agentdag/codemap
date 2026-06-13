@@ -1,3 +1,7 @@
 [workspace]
 resolver = "2"
 members = ["crates/cli","crates/core-ir", "crates/extract"]
+# The Tauri desktop shell is its own workspace (apps/viewer/src-tauri) so the
+# GUI/Tauri stack stays out of `cargo test --workspace` and CI (ubuntu, no
+# webkit2gtk). It path-depends on the engine crates above.
+exclude = ["apps/viewer/src-tauri"]

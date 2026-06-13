@@ -11,6 +11,7 @@ import { toFlowEdges, toFlowNodes } from "./graph";
 import { layout } from "./layout";
 import { IrNodeView } from "./IrNodeView";
 import { DetailsPanel } from "./DetailsPanel";
+import { analyzeFolder, isTauri } from "./tauri";
 
 const SAMPLES = [
   { label: "Go sample", file: "sample-go.json" },
@@ -23,6 +24,9 @@ export default function App() {
   const [doc, setDoc] = useState<IrDocument | null>(null);
   const [selected, setSelected] = useState<IrNode | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  // Native-only: the folder picker + live engine run exist only under Tauri.
+  const [native] = useState(isTauri);
 
   const loadSample = useCallback((file: string) => {
     setError(null);
@@ -41,6 +45,23 @@ export default function App() {
   useEffect(() => {
     loadSample(SAMPLES[0].file);
   }, [loadSample]);
+
+  // Native: pick a folder and render a LIVE extract_repo run (not a sample).
+  const openFolder = useCallback(async () => {
+    setError(null);
+    setBusy(true);
+    try {
+      const live = await analyzeFolder();
+      if (live) {
+        setDoc(live);
+        setSelected(null);
+      }
+    } catch (e) {
+      setError(`Analyze failed: ${String(e)}`);
+    } finally {
+      setBusy(false);
+    }
+  }, []);
 
   const onFile = (ev: React.ChangeEvent<HTMLInputElement>) => {
     const file = ev.target.files?.[0];
@@ -72,6 +93,11 @@ export default function App() {
     <div className="app">
       <header className="toolbar">
         <strong>codemap viewer</strong>
+        {native && (
+          <button className="file-btn" onClick={openFolder} disabled={busy}>
+            {busy ? "Analyzing…" : "Open folder…"}
+          </button>
+        )}
         <select
           aria-label="Bundled sample"
           defaultValue={SAMPLES[0].file}

@@ -1,0 +1,18 @@
+[package]
+name = "viewer-tauri"
+version = "0.1.0"
+edition = "2021"
+description = "codemap viewer desktop shell (Tauri v2)"
+
+# Separate workspace on purpose: keeps the Tauri/GUI dependency stack out of the
+# root engine workspace (which CI builds via `cargo test --workspace` on ubuntu,
+# where webkit2gtk isn't installed). The engine is consumed as a path dependency.
+[workspace]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+extract = { path = "../../../crates/extract" }
