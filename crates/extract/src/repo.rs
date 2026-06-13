@@ -18,6 +18,12 @@ use crate::ts::TsExtractor;
 
 const TOOL_VERSION: &str = "0.1.0";
 
+/// Max heuristic `calls` fan-out: if a name resolves (at its tightest scope) to
+/// more than this many candidates, the call is too ambiguous and emits no edge.
+/// Keeps common method names (`execute`, `save`, …) from producing 100s of mostly
+/// wrong edges on real monorepos.
+const MAX_CALL_FANOUT: usize = 3;
+
 /// One extracted file plus its directory (package) relpath and source language.
 struct ExtractedFile {
     relpath: String,
@@ -346,7 +352,8 @@ struct CallIndex {
     functions_in_pkg: BTreeMap<(String, String), Vec<String>>,
     /// (package dir, name) → Function|Method node ids (Go Rule 1).
     callable_in_module: BTreeMap<(String, String), Vec<String>>,
-    /// method name → (package dir, Method node id) (Go Rule 3 / TS Rule 2).
+    /// method name → (defining file relpath, Method node id) (Go Rule 3 / TS
+    /// Rule 2). The file lets us scope matches: same file → same module → repo.
     methods_by_name: BTreeMap<String, Vec<(String, String)>>,
     /// (file relpath, function name) → Function node ids (TS Rule 1a/1b).
     functions_by_file: BTreeMap<(String, String), Vec<String>>,
@@ -379,9 +386,10 @@ fn resolve_calls(
             }
         }
         for call in &f.extraction.calls {
-            // Resolution is language-specific; each branch only matches repo nodes.
-            let targets = match f.language {
-                "go" => resolve_call(call, &f.dir, &go_imported, &index),
+            // Resolution is language-specific; each branch resolves at the
+            // tightest scope and only matches repo nodes.
+            let mut targets = match f.language {
+                "go" => resolve_call(call, &f.relpath, &f.dir, &go_imported, &index),
                 "ts" => resolve_call_ts(
                     call,
                     &f.relpath,
@@ -392,6 +400,12 @@ fn resolve_calls(
                 ),
                 _ => Vec::new(),
             };
+            targets.sort();
+            targets.dedup();
+            // Too ambiguous (common name matching many candidates) → no edge.
+            if targets.len() > MAX_CALL_FANOUT {
+                continue;
+            }
             for target in targets {
                 call_sites
                     .entry((call.caller_node_id.clone(), target))
@@ -444,7 +458,7 @@ fn build_call_index(files: &[ExtractedFile]) -> CallIndex {
                         .methods_by_name
                         .entry(sym.name.clone())
                         .or_default()
-                        .push((dir.clone(), sym.id.clone()));
+                        .push((sym.location.file.clone(), sym.id.clone()));
                     index
                         .callable_in_module
                         .entry((dir, sym.name.clone()))
@@ -462,6 +476,7 @@ fn build_call_index(files: &[ExtractedFile]) -> CallIndex {
 /// matching target id (fan-out for ambiguous method calls); empty = skip.
 fn resolve_call(
     call: &CallRef,
+    caller_file: &str,
     caller_dir: &str,
     imported: &BTreeMap<String, String>,
     index: &CallIndex,
@@ -475,10 +490,12 @@ fn resolve_call(
                 .cloned()
                 .unwrap_or_default(),
             // Qualifier isn't an imported package → a receiver var; Rule 3.
-            None => method_match(&call.callee_name, caller_dir, index),
+            None => method_match(&call.callee_name, caller_file, caller_dir, index),
         },
         // Rule 3: `<expr>.Name(...)` method call.
-        None if call.is_method_call => method_match(&call.callee_name, caller_dir, index),
+        None if call.is_method_call => {
+            method_match(&call.callee_name, caller_file, caller_dir, index)
+        }
         // Rule 2: bare `Name(...)` → Function named Name in the same package.
         None => index
             .functions_in_pkg
@@ -500,7 +517,7 @@ fn resolve_call_ts(
 ) -> Vec<String> {
     // Rule 2: `obj.method(...)` → match Method nodes by name (no type info).
     if call.is_method_call {
-        return method_match(&call.callee_name, caller_dir, index);
+        return method_match(&call.callee_name, caller_file, caller_dir, index);
     }
     // Rule 1a: bare `foo(...)` → Function named foo in the same file.
     let same_file = index
@@ -527,22 +544,29 @@ fn resolve_call_ts(
     Vec::new()
 }
 
-/// Rule 3 (Go) / Rule 2 (TS): match a method name, preferring methods in the
-/// caller's package; if none are in-package, fan out to every same-named method.
-fn method_match(name: &str, caller_dir: &str, index: &CallIndex) -> Vec<String> {
+/// Rule 3 (Go) / Rule 2 (TS): match a method name at the **tightest scope that
+/// has any match** — same file, then same module, then repo-wide. Returns that
+/// scope's candidate ids (uncapped; the caller applies [`MAX_CALL_FANOUT`]).
+fn method_match(name: &str, caller_file: &str, caller_dir: &str, index: &CallIndex) -> Vec<String> {
     let Some(candidates) = index.methods_by_name.get(name) else {
         return Vec::new();
     };
-    let same_pkg: Vec<String> = candidates
-        .iter()
-        .filter(|(dir, _)| dir == caller_dir)
-        .map(|(_, id)| id.clone())
-        .collect();
-    if same_pkg.is_empty() {
-        candidates.iter().map(|(_, id)| id.clone()).collect()
-    } else {
-        same_pkg
+    let in_scope = |keep: &dyn Fn(&str) -> bool| -> Vec<String> {
+        candidates
+            .iter()
+            .filter(|(file, _)| keep(file))
+            .map(|(_, id)| id.clone())
+            .collect()
+    };
+    let same_file = in_scope(&|file| file == caller_file);
+    if !same_file.is_empty() {
+        return same_file;
     }
+    let same_module = in_scope(&|file| dir_of(file) == caller_dir);
+    if !same_module.is_empty() {
+        return same_module;
+    }
+    candidates.iter().map(|(_, id)| id.clone()).collect()
 }
 
 fn site_key(site: &CallSite) -> (String, u32, u32, u32, u32) {

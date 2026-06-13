@@ -50,6 +50,15 @@ against the full node set:
 - Unresolvable/external (stdlib, aliased-import qualifiers, no matching node):
   skipped. No `External` nodes are created.
 
+### Fan-out cap (Go + TS, added later)
+Method/bare-call candidates are resolved at the **tightest scope that has any
+match** — same file → same module → repo-wide — and the candidate set from that
+scope is used. If it has more than `MAX_CALL_FANOUT` (= 3) members the call is
+too ambiguous and emits **no** edge; otherwise one heuristic edge per candidate
+(unchanged). This stops common names (`execute`, `save`, …) on a real monorepo
+from fanning out to ~150 mostly-wrong edges each. Unique-name (single-candidate)
+calls are unaffected; the committed goldens are byte-identical.
+
 Edges merge multiple sites between the same source+target into one edge (sites
 sorted by `(file, range)`). Calls inside closures/func literals are attributed
 to the enclosing top-level function/method; package-level initializer calls are
