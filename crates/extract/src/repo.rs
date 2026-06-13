@@ -24,6 +24,21 @@ const TOOL_VERSION: &str = "0.1.0";
 /// wrong edges on real monorepos.
 const MAX_CALL_FANOUT: usize = 3;
 
+/// Directories always pruned during the walk — heavy/generated trees that aren't
+/// source and would balloon analysis. Pruned even when not gitignored; .gitignore
+/// is still honored on top of this.
+const SKIP_DIRS: &[&str] = &[
+    "node_modules",
+    ".git",
+    "dist",
+    "build",
+    "out",
+    "target",
+    ".next",
+    "coverage",
+    "vendor",
+];
+
 /// One extracted file plus its directory (package) relpath and source language.
 struct ExtractedFile {
     relpath: String,
@@ -177,7 +192,22 @@ fn walk_and_extract(
     extractors: &[Box<dyn LanguageExtractor>],
 ) -> Result<Vec<ExtractedFile>, ExtractError> {
     let mut out = Vec::new();
-    for result in WalkBuilder::new(root).build() {
+    let walk = WalkBuilder::new(root)
+        .filter_entry(|entry| {
+            // Never prune the root itself; prune SKIP_DIRS directories anywhere
+            // below it (in addition to .gitignore, which WalkBuilder still honors).
+            if entry.depth() == 0 {
+                return true;
+            }
+            if entry.file_type().is_some_and(|t| t.is_dir()) {
+                if let Some(name) = entry.file_name().to_str() {
+                    return !SKIP_DIRS.contains(&name);
+                }
+            }
+            true
+        })
+        .build();
+    for result in walk {
         let entry = result.map_err(|e| ExtractError::Walk(e.to_string()))?;
         if !entry.file_type().is_some_and(|t| t.is_file()) {
             continue;

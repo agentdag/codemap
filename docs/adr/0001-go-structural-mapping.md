@@ -20,6 +20,13 @@ LSP, no heuristic name matching. Every edge produced here is `resolved`.
 
 Package-level `var`/`const` are skipped this stage.
 
+## Decision — walker pruning (added later)
+The repo walker honors `.gitignore` and additionally **always** prunes heavy /
+generated directories by name, anywhere below the root: `node_modules`, `.git`,
+`dist`, `build`, `out`, `target`, `.next`, `coverage`, `vendor`. The root itself
+is never pruned. This keeps real repos analyzable; the committed fixtures contain
+none of these dirs, so goldens are unaffected.
+
 ## Decision — structural edges (`confidence = resolved`)
 - `contains` Module→File, Module→Module (each package dir links to its nearest
   ancestor package dir), File→{Function,Class,Interface,TypeAlias}.

@@ -6,10 +6,18 @@ use std::path::Path;
 
 /// Run the extraction engine on `path` and return canonical IR JSON.
 /// `Err` carries a readable message shown in the UI.
+///
+/// Extraction is CPU-bound and can take a while on a large repo, so it runs on a
+/// blocking worker thread — the webview/UI thread never stalls during analysis.
 #[tauri::command]
-fn analyze_repo(path: String) -> Result<String, String> {
-    let doc = extract::extract_repo(Path::new(&path)).map_err(|e| e.to_string())?;
-    Ok(doc.to_canonical_json())
+async fn analyze_repo(path: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        extract::extract_repo(Path::new(&path))
+            .map(|doc| doc.to_canonical_json())
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("analysis task failed: {e}"))?
 }
 
 fn main() {

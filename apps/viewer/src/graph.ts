@@ -4,8 +4,8 @@
 import { MarkerType, type Edge, type Node } from "reactflow";
 import type { EdgeKind, IrDocument, IrNode, NodeKind } from "./ir";
 
-export const NODE_W = 188;
-export const NODE_H = 56;
+// Re-exported for existing importers; defined in dims.ts (worker-safe).
+export { NODE_W, NODE_H } from "./dims";
 
 // Distinct color per node kind.
 const KIND_COLOR: Record<string, string> = {
